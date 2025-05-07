@@ -1,0 +1,195 @@
+---
+title: "RNA-seq Analysis with DESeq2"
+author: "Xinzheng Wang"
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+# Load essential packages for the pipeline
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tximport)
+library(DESeq2)
+library(readr)
+library(ggplot2)
+library(pheatmap)
+library(ggrepel)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+```
+
+## 1. Load Sample Metadata and Quantification Files
+
+```{r load-data}
+# Define absolute base directory (do not use setwd)
+base_dir <- "C:/RNAseq_analysis"
+
+samples <- data.frame(
+  sample = c("SRR17518171", "SRR17518172", "SRR17518173", "SRR17518174",
+             "SRR17518175", "SRR17518176", "SRR17518177", "SRR17518178"),
+  condition = c("LPS", "Control", "LPS", "Control",
+                "LPS", "Control", "LPS", "Control")
+)
+
+# Set factor levels and reference group
+samples$condition <- factor(samples$condition)
+samples$condition <- relevel(samples$condition, ref = "Control")
+
+# Define Salmon quant file paths using absolute paths
+files <- file.path(base_dir, "salmon_quant", paste0(samples$sample, "_quant"), "quant.sf")
+names(files) <- samples$sample
+
+# Load transcript-to-gene mapping
+tx2gene <- read_tsv(file.path(base_dir, "tx2gene.tsv"), col_names = FALSE)
+colnames(tx2gene) <- c("TXNAME", "GENEID")
+```
+
+## 2. Import and Normalize Transcript Counts
+
+```{r check-files}
+# Check that all quant.sf files exist and update samples/files accordingly
+existing <- file.exists(files)
+if (!any(existing)) {
+  stop("No quant.sf files found. Check that your working directory is correct and files exist.")
+} else if (!all(existing)) {
+  warning("Some files are missing. Dropping samples:", paste(samples$sample[!existing], collapse=", "))
+  samples <- samples[existing, ]
+  files <- files[existing]
+}
+message("Proceeding with ", length(files), " quant.sf files.")
+```
+
+
+```{r import-counts}
+# Import transcript-level data and summarize to gene-level
+# ignoreTxVersion strips version suffix from transcript IDs
+
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene, ignoreTxVersion = TRUE)
+```
+
+## 3. Differential Expression Analysis with DESeq2
+
+```{r deseq-analysis}
+# Create DESeqDataSet and perform DE analysis
+
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~ condition)
+dds <- DESeq(dds)
+res <- results(dds)
+res_df <- as.data.frame(res)
+res_df$ensembl_gene_id <- rownames(res_df)
+```
+
+## 4. Gene Annotation
+
+```{r annotate-genes}
+# Map Ensembl IDs to gene symbols and Entrez IDs
+
+annot <- bitr(res_df$ensembl_gene_id, fromType = "ENSEMBL",
+              toType = c("SYMBOL", "ENTREZID"),
+              OrgDb = org.Hs.eg.db)
+res_annot <- merge(res_df, annot, by.x = "ensembl_gene_id", by.y = "ENSEMBL", all.x = TRUE)
+
+# Save results
+write.csv(res_annot, "DESeq2_results_with_symbols.csv", row.names = FALSE)
+```
+
+## 5. Visualization: MA Plot and PCA
+
+```{r plots-ma-pca}
+# Visualize overall changes (MA plot) and sample clustering (PCA)
+
+plotMA(res, ylim = c(-5, 5))
+vsd <- vst(dds, blind = FALSE)
+plotPCA(vsd, intgroup = "condition")
+```
+
+## 6. Functional Enrichment: GO and KEGG
+
+```{r enrichments}
+# Filter significant genes and prepare for enrichment
+
+sig_genes <- res_annot[res_annot$padj < 0.05 & !is.na(res_annot$ensembl_gene_id), ]
+gene_list <- gsub("\\.\\d+$", "", sig_genes$ensembl_gene_id)
+gene_list <- unique(gene_list)
+gene_list <- gene_list[gene_list != ""]
+
+# Map to Entrez IDs
+gene_entrez <- bitr(gene_list, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = org.Hs.eg.db)
+valid_entrez <- gene_entrez$ENTREZID[gene_entrez$ENTREZID %in% keys(org.Hs.eg.db, keytype = "ENTREZID")]
+
+# GO enrichment (Biological Process)
+go_result <- enrichGO(
+  gene = valid_entrez,
+  OrgDb = org.Hs.eg.db,
+  keyType = "ENTREZID",
+  ont = "BP",
+  pvalueCutoff = 0.05,
+  qvalueCutoff = 0.2,
+  readable = TRUE
+)
+
+# KEGG enrichment
+kegg_result <- enrichKEGG(
+  gene = valid_entrez,
+  organism = "hsa",
+  pvalueCutoff = 0.05
+)
+kegg_result <- setReadable(kegg_result, OrgDb = org.Hs.eg.db, keyType = "ENTREZID")
+
+# Save enrichment tables
+write.csv(as.data.frame(go_result), "GO_all_DEGs.csv", row.names = FALSE)
+write.csv(as.data.frame(kegg_result), "KEGG_all_DEGs.csv", row.names = FALSE)
+```
+
+## 7. Enrichment Plotting
+
+```{r enrichment-plots}
+barplot(go_result, showCategory = 20, title = "GO Biological Process") +
+  theme(axis.text.y = element_text(size = 6, lineheight = 2),
+        plot.margin = margin(5, 50, 5, 80, unit = "pt"))
+dotplot(go_result, showCategory = 20, title = "GO Biological Process") +
+  theme(axis.text.y = element_text(size = 6, lineheight = 2),
+        axis.text.y.left = element_text(margin = margin(b = 8))) +
+  geom_point(aes(size = p.adjust), shape = 21) +
+  scale_size_continuous(range = c(2, 5))
+barplot(kegg_result, showCategory = 20, title = "KEGG Pathways") +
+  theme(axis.text.y = element_text(size = 6, lineheight = 2),
+        plot.margin = margin(5, 50, 5, 80, unit = "pt"))
+dotplot(kegg_result, showCategory = 20, title = "KEGG Pathways") +
+  theme(axis.text.y = element_text(size = 6, lineheight = 2),
+        axis.text.y.left = element_text(margin = margin(b = 8))) +
+  geom_point(aes(size = p.adjust), shape = 21) +
+  scale_size_continuous(range = c(2, 5))          # Adjust dot size range
+```
+
+## 8. Volcano Plot and Top Genes
+
+```{r volcano}
+# Create volcano plot highlighting top 10 DEGs by adjusted p-value
+
+res_annot$threshold <- as.factor(res_annot$padj < 0.05 & abs(res_annot$log2FoldChange) > 1)
+top <- res_annot[which(res_annot$padj < 0.05 & abs(res_annot$log2FoldChange) > 1), ]
+top <- top[order(top$padj), ][1:10, ]
+
+ggplot(res_annot, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(aes(color = threshold), alpha = 0.6) +
+  scale_color_manual(values = c("grey", "red")) +
+  geom_text_repel(data = top, aes(label = SYMBOL), size = 3.5, max.overlaps = 100) +
+  theme_minimal(base_size = 16) +
+  labs(title = "Volcano Plot (Top 10 Labeled)",
+       x = "log2 Fold Change", y = "-log10 Adjusted p-value")
+```
+
+## 9. Heatmap of Top 100 DEGs
+
+```{r heatmap}
+# Display heatmap of top 100 most significant DEGs by adjusted p-value
+
+top_genes <- head(res_annot[order(res_annot$padj), "ensembl_gene_id"], 100)
+vsd_mat <- assay(vsd)[top_genes, ]
+anno <- as.data.frame(colData(dds)[, "condition", drop = FALSE])
+
+pheatmap(vsd_mat, annotation_col = anno,
+         show_rownames = FALSE, fontsize_col = 10,
+         clustering_distance_rows = "correlation", scale = "row",
+         main = "Top 100 Differentially Expressed Genes")
+```

@@ -2,9 +2,21 @@
 
 This repository contains a full RNA-seq analysis pipeline using both alignment-based (STAR) and alignment-free (Salmon) methods, followed by downstream differential expression analysis using DESeq2.
 
+# The Dataset link: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193336
+
+# Reference work: Multi-omics profiling of collagen-induced arthritis mouse model reveals early metabolic dysregulation via SIRT1 axis. 
+
+# The goal of the project: Profile LPS-stimulated transcriptome changes in human macrophages. 
+
+# Summary of the RNA-Seq dataset: RNA isolated from unstimulated and LPS-stimulated human macrophages from 4 blood donors (n = 4 for unstimulated, n = 4 for LPS-stimulated).
+
+# Platform: Illumina NovaSeq 6000
+
+# Reference Genome: Human genome B38 
+
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 RNAseq_analysis/
@@ -24,7 +36,7 @@ RNAseq_analysis/
 
 ---
 
-## 🔧 Preprocessing: SRA Download & FASTQ Generation
+## Preprocessing: SRA Download & FASTQ Generation
 
 ```bash
 # Connect to HPC cluster
@@ -43,7 +55,7 @@ fasterq-dump --split-files --threads 4 -O fastq/ rawdata/SRRxxxxxxx
 
 ---
 
-## 🧬 Genome Preparation
+## Genome Preparation
 
 ```bash
 # Download genome and annotation
@@ -53,7 +65,7 @@ wget https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh3
 gunzip *.gz
 ```
 
-### ➤ STAR Index
+### STAR Index
 ```bash
 STAR --runThreadN 8 \
      --runMode genomeGenerate \
@@ -63,7 +75,7 @@ STAR --runThreadN 8 \
      --sjdbOverhang 100
 ```
 
-### ➤ Salmon Index
+### Salmon Index
 ```bash
 salmon index \
   -t Homo_sapiens.GRCh38.cdna.all.fa \
@@ -73,9 +85,9 @@ salmon index \
 
 ---
 
-## 🧪 Alignment & Quantification
+## Alignment & Quantification
 
-### ➤ STAR Alignment
+### STAR Alignment
 ```bash
 STAR --genomeDir star_index \
      --readFilesIn sample_1.fastq.gz sample_2.fastq.gz \
@@ -84,7 +96,7 @@ STAR --genomeDir star_index \
      --outSAMtype BAM SortedByCoordinate
 ```
 
-### ➤ Salmon Quantification
+### Salmon Quantification
 ```bash
 salmon quant \
   -i salmon_index \
@@ -97,7 +109,7 @@ salmon quant \
 
 ---
 
-## 📊 Differential Expression with DESeq2 (RMarkdown)
+## Differential Expression with DESeq2
 
 See `deseq2_analysis.Rmd` for a fully annotated pipeline, including:
 
@@ -109,7 +121,7 @@ See `deseq2_analysis.Rmd` for a fully annotated pipeline, including:
 
 ---
 
-## 🧾 Transcript-to-Gene Mapping
+## Transcript-to-Gene Mapping
 Generated from GTF with:
 ```bash
 awk '$3 == "transcript"' Homo_sapiens.GRCh38.113.gtf | \
@@ -118,5 +130,5 @@ awk '{ match($0, /transcript_id "([^"]+)"/, a); match($0, /gene_id "([^"]+)"/, b
 
 ---
 
-## 📬 Contact
+## Contact
 For questions, contact: **xinwang@uchc.edu**
