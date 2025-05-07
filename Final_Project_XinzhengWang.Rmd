@@ -143,22 +143,61 @@ write.csv(as.data.frame(kegg_result), "KEGG_all_DEGs.csv", row.names = FALSE)
 ## 7. Enrichment Plotting
 
 ```{r enrichment-plots}
+single_line_labels <- function(x) {
+  gsub("\n", " ", x)
+}
+
 barplot(go_result, showCategory = 20, title = "GO Biological Process") +
-  theme(axis.text.y = element_text(size = 6, lineheight = 2),
-        plot.margin = margin(5, 50, 5, 80, unit = "pt"))
+  theme(
+    axis.text.y = element_text(
+      size = 6,
+      lineheight = 1,
+      hjust = 1,
+      margin = margin(r = 15, unit = "pt")
+    ),
+    plot.margin = margin(5, 50, 5, 120, unit = "pt")  
+  ) +
+  scale_y_discrete(labels = single_line_labels)  
+
 dotplot(go_result, showCategory = 20, title = "GO Biological Process") +
-  theme(axis.text.y = element_text(size = 6, lineheight = 2),
-        axis.text.y.left = element_text(margin = margin(b = 8))) +
+  theme(
+    axis.text.y = element_text(
+      size = 6,
+      lineheight = 1,
+      hjust = 1,
+      margin = margin(r = 15, unit = "pt")
+    ),
+    plot.margin = margin(5, 50, 5, 120, unit = "pt")
+  ) +
   geom_point(aes(size = p.adjust), shape = 21) +
-  scale_size_continuous(range = c(2, 5))
+  scale_size_continuous(range = c(2, 5)) +
+  scale_y_discrete(labels = single_line_labels) 
+
 barplot(kegg_result, showCategory = 20, title = "KEGG Pathways") +
-  theme(axis.text.y = element_text(size = 6, lineheight = 2),
-        plot.margin = margin(5, 50, 5, 80, unit = "pt"))
+  theme(
+    axis.text.y = element_text(
+      size = 6,
+      lineheight = 1,
+      hjust = 1,
+      margin = margin(r = 15, unit = "pt")
+    ),
+    plot.margin = margin(5, 50, 5, 120, unit = "pt")
+  ) +
+  scale_y_discrete(labels = single_line_labels)  
+
 dotplot(kegg_result, showCategory = 20, title = "KEGG Pathways") +
-  theme(axis.text.y = element_text(size = 6, lineheight = 2),
-        axis.text.y.left = element_text(margin = margin(b = 8))) +
+  theme(
+    axis.text.y = element_text(
+      size = 6,
+      lineheight = 1,
+      hjust = 1,
+      margin = margin(r = 15, unit = "pt")
+    ),
+    plot.margin = margin(5, 50, 5, 120, unit = "pt")
+  ) +
   geom_point(aes(size = p.adjust), shape = 21) +
-  scale_size_continuous(range = c(2, 5))          # Adjust dot size range
+  scale_size_continuous(range = c(2, 5)) +
+  scale_y_discrete(labels = single_line_labels) 
 ```
 
 ## 8. Volcano Plot and Top Genes
