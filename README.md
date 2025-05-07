@@ -2,17 +2,23 @@
 
 This repository contains a full RNA-seq analysis pipeline using both alignment-based (STAR) and alignment-free (Salmon) methods, followed by downstream differential expression analysis using DESeq2.
 
-# The Dataset link: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193336
+# The Dataset link
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193336
 
-# Reference work: Multi-omics profiling of collagen-induced arthritis mouse model reveals early metabolic dysregulation via SIRT1 axis. 
+# Reference work
+Multi-omics profiling of collagen-induced arthritis mouse model reveals early metabolic dysregulation via SIRT1 axis. 
 
-# The goal of the project: Profile LPS-stimulated transcriptome changes in human macrophages. 
+# The goal of the project
+Profile LPS-stimulated transcriptome changes in human macrophages. 
 
-# Summary of the RNA-Seq dataset: RNA isolated from unstimulated and LPS-stimulated human macrophages from 4 blood donors (n = 4 for unstimulated, n = 4 for LPS-stimulated).
+# Summary of the RNA-Seq dataset
+RNA isolated from unstimulated and LPS-stimulated human macrophages from 4 blood donors (n = 4 for unstimulated, n = 4 for LPS-stimulated).
 
-# Platform: Illumina NovaSeq 6000
+# Platform
+Illumina NovaSeq 6000
 
-# Reference Genome: Human genome B38 
+# Reference Genome
+Human genome B38 
 
 ---
 
